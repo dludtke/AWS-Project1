@@ -34,23 +34,23 @@ Resources:
         ALBSecurityGroup: !GetAtt 
         - NetworkStack
         - Outputs.ALBSecurityGroup
-        #NATSecurityGroup: !GetAtt 
-        #- NetworkStack
-        #- Outputs.NATSecurityGroup
+        NATInstance: !GetAtt 
+        - NetworkStack
+        - Outputs.NATInstance
         BastionHostSecurityGroup: !GetAtt 
         - NetworkStack
         - Outputs.BastionHostSecurityGroup
 
 Outputs:
-  NetworkStackName:
+  NetworkStackID:
     Value: !Ref NetworkStack
-  ComputeStackName:
+  ComputeStackID:
     Value: !Ref ComputeStack
-  OutputFromNetworkStack:
-    Value: !GetAtt 
-    - NetworkStack
-    - Outputs.NetworkStack
-  OutputFromComputeStack:
-    Value: !GetAtt 
-    - ComputeStack
-    - Outputs.ComputeStack
+  #OutputFromNetworkStack:
+  #  Value: !GetAtt 
+  #  - NetworkStack
+  #  - Outputs
+  #OutputFromComputeStack:
+  #  Value: !GetAtt 
+  #  - ComputeStack
+  #  - Outputs

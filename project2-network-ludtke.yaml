@@ -21,16 +21,13 @@ Resources:
   AttachGateway:
     Type: AWS::EC2::VPCGatewayAttachment
     Properties:
-      VpcId:
-        Ref: VPC
-      InternetGatewayId:
-        Ref: InternetGateway
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
 
   PublicSubnet1:
     Type: AWS::EC2::Subnet
     Properties:
-      VpcId:
-        Ref: VPC
+      VpcId: !Ref VPC
       CidrBlock: 10.0.1.0/24
       AvailabilityZone: us-east-1a
         #Fn::Select:
@@ -43,8 +40,7 @@ Resources:
   PublicSubnet2:
     Type: AWS::EC2::Subnet
     Properties:
-      VpcId:
-        Ref: VPC
+      VpcId: !Ref VPC
       CidrBlock: 10.0.2.0/24
       AvailabilityZone: us-east-1b
         #Fn::Select:
@@ -57,8 +53,7 @@ Resources:
   PrivateSubnet1:
     Type: AWS::EC2::Subnet
     Properties:
-      VpcId:
-        Ref: VPC
+      VpcId: !Ref VPC
       CidrBlock: 10.0.3.0/24
       AvailabilityZone: us-east-1a
         #Fn::Select:
@@ -71,8 +66,7 @@ Resources:
   PrivateSubnet2:
     Type: AWS::EC2::Subnet
     Properties:
-      VpcId:
-        Ref: VPC
+      VpcId: !Ref VPC
       CidrBlock: 10.0.4.0/24
       AvailabilityZone: us-east-1b
         #Fn::Select:
@@ -85,8 +79,7 @@ Resources:
   PublicRouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
-      VpcId:
-        Ref: VPC
+      VpcId: !Ref VPC
       Tags:
       - Key: Name
         Value: PubRT-Project2
@@ -94,33 +87,26 @@ Resources:
   PublicRoute:
     Type: AWS::EC2::Route
     Properties:
-      RouteTableId:
-        Ref: PublicRouteTable
+      RouteTableId: !Ref PublicRouteTable
       DestinationCidrBlock: 0.0.0.0/0
-      GatewayId:
-        Ref: InternetGateway
+      GatewayId: !Ref InternetGateway
 
   PublicSubnetRouteTableAssociation1:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      SubnetId:
-        Ref: PublicSubnet1
-      RouteTableId:
-        Ref: PublicRouteTable
+      SubnetId: !Ref PublicSubnet1
+      RouteTableId: !Ref PublicRouteTable
 
   PublicSubnetRouteTableAssociation2:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      SubnetId:
-        Ref: PublicSubnet2
-      RouteTableId:
-        Ref: PublicRouteTable
+      SubnetId: !Ref PublicSubnet2
+      RouteTableId: !Ref PublicRouteTable
 
   PrivateRouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
-      VpcId:
-        Ref: VPC
+      VpcId: !Ref VPC
       Tags:
       - Key: Name
         Value: PriRT-Project2
@@ -128,27 +114,21 @@ Resources:
   PrivateRoute:
     Type: AWS::EC2::Route
     Properties:
-      RouteTableId:
-        Ref: PrivateRouteTable
+      RouteTableId: !Ref PrivateRouteTable
       DestinationCidrBlock: 0.0.0.0/0
-      InstanceId:
-        Ref: NATInstance
+      InstanceId: !Ref NATInstance
 
   PrivateRouteTableAssociation1:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      SubnetId:
-        Ref: PrivateSubnet1
-      RouteTableId:
-        Ref: PrivateRouteTable
+      SubnetId: !Ref PrivateSubnet1
+      RouteTableId: !Ref PrivateRouteTable
 
   PrivateRouteTableAssociation2:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      SubnetId:
-        Ref: PrivateSubnet2
-      RouteTableId:
-        Ref: PrivateRouteTable
+      SubnetId: !Ref PrivateSubnet2
+      RouteTableId: !Ref PrivateRouteTable
 
   ALBSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -162,6 +142,9 @@ Resources:
           CidrIp: 0.0.0.0/0
       VpcId: 
         Ref: VPC
+      Tags:
+        - Key: Name
+          Value: ALBSG
 
   WebInstanceSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -169,16 +152,18 @@ Resources:
       GroupDescription: Security group for web instances on private subnets
       VpcId: 
         Ref: VPC
-
-  WebInstanceSecurityGroupIngress:
-    Type: AWS::EC2::SecurityGroupIngress
-    Properties:
-        GroupId: 
-          Ref: WebInstanceSecurityGroup
-        IpProtocol: tcp
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: 22
+        ToPort: 22
+        SourceSecurityGroupId: !GetAtt BastionHostSecurityGroup.GroupId
+      - IpProtocol: tcp
         FromPort: 80
         ToPort: 80
         SourceSecurityGroupId: !GetAtt ALBSecurityGroup.GroupId
+      Tags:
+        - Key: Name
+          Value: WebInsSG
 
   NATInstance:
     Type: AWS::EC2::Instance
@@ -191,7 +176,12 @@ Resources:
           DeviceIndex: "0"
           SubnetId:
             Ref: PublicSubnet1
+          GroupSet:
+            - !Ref NATSecurityGroup
       SourceDestCheck: false
+      Tags:
+        - Key: Name
+          Value: NATinst
 
   NATSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -199,16 +189,17 @@ Resources:
       GroupDescription: Security group for NAT instance on public subnet
       VpcId: 
         Ref: VPC
+      Tags:
+        - Key: Name
+          Value: NATSG
 
   NATSecurityGroupIngress:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
         GroupId: 
           Ref: NATSecurityGroup
-        IpProtocol: tcp
-        FromPort: 80
-        ToPort: 80
-        SourceSecurityGroupId: !GetAtt ALBSecurityGroup.GroupId
+        IpProtocol: "-1"
+        CidrIp: 0.0.0.0/0
 
   BastionHostSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -216,6 +207,9 @@ Resources:
       GroupDescription: Security group for the bastion host on public subnet
       VpcId: 
         Ref: VPC
+      Tags:
+        - Key: Name
+          Value: BastionSG
 
   BastionHostSecurityGroupIngress:
     Type: AWS::EC2::SecurityGroupIngress
@@ -253,6 +247,9 @@ Outputs:
     Value: !GetAtt
     - ALBSecurityGroup
     - GroupId
+  NATInstance:
+    Description: NAT Instance ID
+    Value: !Ref NATInstance
   NATSecurityGroup:
     Description: NAT Instance Security Group for Project2
     Value: !GetAtt 
